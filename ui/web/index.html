@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Glide — Head-Tracking Cursor Switcher</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <div class="logo-container">
+            <div class="logo-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="16 18 22 12 16 6"></polyline>
+                    <polyline points="8 6 2 12 8 18"></polyline>
+                </svg>
+            </div>
+            <div class="logo-text">Glide</div>
+        </div>
+        <div class="nav-links">
+            <a class="nav-link active" id="nav-home" onclick="showView('onboarding-view')">Home</a>
+            <a class="nav-link" id="nav-calibrate" onclick="showView('calibrate-view')">Calibrate</a>
+            <a class="nav-link" id="nav-settings" onclick="showView('settings-view')">Settings</a>
+        </div>
+    </header>
+
+    <div class="app-container">
+        <!-- ONBOARDING VIEW -->
+        <div class="glass-card view-panel" id="onboarding-view">
+            <h1>Glide Cursor Switcher</h1>
+            <p class="subtitle">Warp your mouse cursor to the monitor you look at when pressing a hotkey. No dragging required.</p>
+            
+            <div class="monitor-layout-box">
+                <div class="monitors-grid" id="onboarding-monitors-grid">
+                    <!-- Loaded dynamically via Python -->
+                    <div style="color: var(--text-muted);">Detecting monitors...</div>
+                </div>
+            </div>
+
+            <div class="onboarding-steps">
+                <div class="step-card">
+                    <div class="step-num">01</div>
+                    <div class="step-title">Calibrate</div>
+                    <div class="step-desc">Look at each screen boundary for a few seconds to configure thresholds.</div>
+                </div>
+                <div class="step-card">
+                    <div class="step-num">02</div>
+                    <div class="step-title">Hold Hotkey</div>
+                    <div class="step-desc">Hold the hotkey (<kbd>Caps Lock</kbd> + <kbd>Shift</kbd>) to enable eye-tracking cursor switching.</div>
+                </div>
+                <div class="step-card">
+                    <div class="step-num">03</div>
+                    <div class="step-title">Gaze & Glide</div>
+                    <div class="step-desc">Look at another screen, and release the hotkey. Your cursor warps instantly.</div>
+                </div>
+            </div>
+
+            <div class="btn-group">
+                <button class="btn btn-primary" onclick="startCalibrationFlow()">
+                    Start Calibration
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                        <polyline points="12 5 19 12 12 19"></polyline>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- CALIBRATION VIEW -->
+        <div class="glass-card view-panel" id="calibrate-view" style="display: none;">
+            <h1>Guided Calibration</h1>
+            <p class="subtitle">Look directly at the highlighted screen boundary during the countdown.</p>
+            
+            <div class="calibration-container">
+                <div class="camera-preview-wrapper">
+                    <!-- Streamed dynamically from python local server -->
+                    <img id="camera-stream" src="" alt="Webcam feed with landmarks" style="display: none;">
+                    <div class="camera-placeholder" id="camera-loading">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                            <circle cx="12" cy="13" r="4"></circle>
+                        </svg>
+                        <span>Starting camera feed...</span>
+                    </div>
+                </div>
+
+                <div class="instruction-card">
+                    <div class="progress-text" id="calibration-progress">Boundary 0 of 0</div>
+                    <div class="instruction-text" id="calibration-instruction">Position your face in front of the camera...</div>
+                    
+                    <div class="countdown-timer" id="calibration-timer-wrapper" style="display: none;">
+                        <svg class="timer-svg" viewBox="0 0 100 100">
+                            <circle class="timer-circle-bg" cx="50" cy="50" r="45"></circle>
+                            <circle class="timer-circle-progress" id="timer-progress-bar" cx="50" cy="50" r="45"></circle>
+                        </svg>
+                        <div class="timer-value" id="timer-text">3</div>
+                    </div>
+
+                    <div id="calibration-status-badge"></div>
+                </div>
+            </div>
+
+            <div class="monitor-layout-box" style="margin-top: 24px; padding: 15px; min-height: 80px;">
+                <div class="monitors-grid" id="calibration-monitors-grid"></div>
+            </div>
+
+            <div class="btn-group">
+                <button class="btn btn-secondary" onclick="cancelCalibration()">Cancel</button>
+                <button class="btn btn-primary" id="btn-next-step" onclick="nextCalibrationStep()" disabled>Next Step</button>
+            </div>
+        </div>
+
+        <!-- SETTINGS VIEW -->
+        <div class="glass-card view-panel" id="settings-view" style="display: none;">
+            <h1>Settings</h1>
+            <p class="subtitle">Customize Glide hotkeys and view monitor arrangements.</p>
+            
+            <div class="settings-form">
+                <div class="form-group">
+                    <label for="hotkey-select">Activation Hotkey Combination</label>
+                    <div class="hotkey-input-wrapper">
+                        <select class="input-glass" id="hotkey-preset" onchange="onPresetChange(this.value)">
+                            <option value="caps lock+shift">Caps Lock + Shift (Default)</option>
+                            <option value="ctrl+shift">Ctrl + Shift</option>
+                            <option value="alt+shift">Alt + Shift</option>
+                            <option value="caps lock">Caps Lock Only</option>
+                            <option value="custom">Custom Combination...</option>
+                        </select>
+                        <input type="text" class="input-glass" id="hotkey-custom-input" placeholder="e.g. ctrl+alt+g" style="display: none;" oninput="validateCustomHotkey(this.value)">
+                    </div>
+                    <span class="help-text">Combinations must be joined by a plus (+) sign. Supported keys: <kbd>ctrl</kbd>, <kbd>alt</kbd>, <kbd>shift</kbd>, <kbd>caps lock</kbd>, <kbd>space</kbd>, <kbd>tab</kbd>, etc.</span>
+                </div>
+
+                <div class="form-group">
+                    <label>Detected Monitor Neighbor Layout</label>
+                    <div class="monitor-layout-box" style="margin: 10px 0; padding: 20px; min-height: 120px;">
+                        <div class="monitors-grid" id="settings-monitors-grid"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="btn-group" style="margin-top: 30px;">
+                <button class="btn btn-secondary" onclick="startCalibrationFlow()">Recalibrate</button>
+                <button class="btn btn-primary" onclick="saveSettings()">Save Settings</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

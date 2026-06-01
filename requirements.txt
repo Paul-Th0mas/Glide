@@ -1,0 +1,8 @@
+mediapipe==0.10.35
+opencv-python
+numpy
+keyboard
+pywin32
+pystray
+pillow
+pywebview
